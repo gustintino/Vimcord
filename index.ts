@@ -52,41 +52,28 @@ function handleNormalKeys(event: KeyboardEvent) {
         return;
     }
 
-    // NOTE: do preventdefault and stoppropgation need to be repeated every time?
     switch (event.key) {
         case "g":
             pending = "g";
             toastHelper('Current pending key is: ' + pending, "message");
-            event.preventDefault();
-            event.stopPropagation();
             break;
 
         case "j":
             scrollStep(scroller, +60);
-            event.preventDefault();
-            event.stopPropagation();
             break;
         case "k":
             scrollStep(scroller, -60);
-            event.preventDefault();
-            event.stopPropagation();
             break;
 
         case "u":
             scrollHalfPage(scroller, -1);
-            event.preventDefault();
-            event.stopPropagation();
             break;
         case "d":
             scrollHalfPage(scroller, 1);
-            event.preventDefault();
-            event.stopPropagation();
             break;
 
         case "G":
             scrollToBottom(scroller);
-            event.preventDefault();
-            event.stopPropagation();
             break;
 
         case "i":
@@ -94,10 +81,11 @@ function handleNormalKeys(event: KeyboardEvent) {
             const chat = getChatInput();
             if (!chat) return;
             placeCaretAtEnd(chat);
-            event.preventDefault();
-            event.stopPropagation();
             break;
     }
+
+    event.preventDefault();
+    event.stopPropagation();
 }
 
 function handleInsertKeys(event: KeyboardEvent) {
