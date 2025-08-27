@@ -4,13 +4,17 @@
 * SPDX-License-Identifier: GPL-3.0-or-later
 */
 
+// FIXME: minor but if the channel doesn't have enough messages to scroll, the binds don't work. Perpetually in insert mode
+
 import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
+import { findByPropsLazy } from "@webpack";
 
 type Mode = "insert" | "normal";
 let mode: Mode = "normal";
 let pending: string = "";
 
+const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
 
 function handlekeyPress(event: KeyboardEvent) {
     if (isEditable(event.target) && mode == "normal") return;
@@ -32,17 +36,25 @@ function handleNormalKeys(event: KeyboardEvent) {
     const scroller = getChatScroller();
     if (!scroller) return;
 
-    if (event.key === "Escape") {
-        pending = "";
-        return;
-    }
+    const hasCtrl = event.ctrlKey;
+    const hasAlt = event.altKey;
+    const hasShift = event.shiftKey;
+    // const hasMeta = event.metaKey; // yay or nay?
+
+    // TODO: need to refactor all of this ti implement mod keys
+    // if (hasShift) switch(event.key) {
+
 
     if (pending === "g") {
         switch (event.key) {
             case "g":
                 pending = "";
-                toastHelper("scroll to top", "message");
+                // toastHelper("scroll to top", "message");
                 scrollToTop(scroller);
+                break;
+
+            default:
+                pending = "";
                 break;
         }
 
@@ -55,7 +67,7 @@ function handleNormalKeys(event: KeyboardEvent) {
     switch (event.key) {
         case "g":
             pending = "g";
-            toastHelper('Current pending key is: ' + pending, "message");
+            // toastHelper('Current pending key is: ' + pending, "message");
             break;
 
         case "j":
@@ -63,6 +75,16 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
         case "k":
             scrollStep(scroller, -60);
+            break;
+
+        case "J":
+            KeyBinds.CHANNEL_NEXT.action(event);
+            // FIXME: unfocusing does diddly dick, the switching isn't instant. i need it on a delay somehow
+            unfocusChatComposer();
+            break;
+        case "K":
+            KeyBinds.CHANNEL_PREV.action(event);
+            unfocusChatComposer();
             break;
 
         case "u":
@@ -95,9 +117,7 @@ function handleInsertKeys(event: KeyboardEvent) {
     switch (event.key) {
         case "Escape":
             // setMode("normal");
-            const chat = getChatInput();
-            if (!chat) return;
-            chat.blur();
+            unfocusChatComposer();
             event.preventDefault();
             event.stopPropagation();
             break;
@@ -109,6 +129,12 @@ function isScrollable(element: Element): boolean {
     const canScrollY = style.overflowY === "auto" || style.overflowY === "scroll";
 
     return canScrollY && element.scrollHeight > element.clientHeight;
+}
+
+function unfocusChatComposer() {
+    const chat = getChatInput();
+    if (!chat) return;
+    chat.blur();
 }
 
 // rename this
@@ -190,7 +216,7 @@ function scrollToBottom(scroller: HTMLElement) {
 function setMode(next: Mode) {
     mode = next;
     pending = "";
-    toastHelper("Changed mode to " + mode, "message");
+    // toastHelper("Changed mode to " + mode, "message");
 }
 
 // i don't want to retype it every single time
