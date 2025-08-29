@@ -166,6 +166,7 @@ function focusChatComposer(chat: HTMLElement | null) {
     if (chat && chat.offsetParent !== null) chat.focus();
 }
 
+// a
 function placeCaretAtEnd() {
     const chat = getChatComposer();
     if (!chat) return;
