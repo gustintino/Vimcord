@@ -16,8 +16,9 @@ let pending: string = "";
 
 const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
 
-function handlekeyPress(event: KeyboardEvent) {
-    if (isEditable(event.target) && mode == "normal") return;
+
+function handleKeyPress(event: KeyboardEvent) {
+    checkMode();
 
     if (mode === "normal") {
         handleNormalKeys(event);
@@ -99,10 +100,7 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
 
         case "i":
-            // setMode("insert");
-            const chat = getChatInput();
-            if (!chat) return;
-            placeCaretAtEnd(chat);
+            placeCaretAtEnd();
             break;
     }
 
@@ -131,12 +129,6 @@ function isScrollable(element: Element): boolean {
     return canScrollY && element.scrollHeight > element.clientHeight;
 }
 
-function unfocusChatComposer() {
-    const chat = getChatInput();
-    if (!chat) return;
-    chat.blur();
-}
-
 // rename this
 function getChatScroller(): HTMLElement | null {
     // NOTE: should eventually actually check if for the correct way of finding the main chat, but this works for now
@@ -157,43 +149,41 @@ function getChatScroller(): HTMLElement | null {
     return null;
 }
 
-function getChatInput(): HTMLElement | null {
+function unfocusChatComposer() {
+    const chat = getChatComposer();
+    if (!chat) return;
+    chat.blur();
+}
+
+function getChatComposer(): HTMLElement | null {
     const chat = document.querySelector<HTMLElement>('main [contenteditable=true][role="textbox"]');
     if (!chat) return null;
 
     return chat;
 }
 
-function placeCaretAtEnd(chat: HTMLElement) {
-    if (chat && chat.offsetParent !== null) {
-        chat.focus({ preventScroll: true });
-
-        const selection = window.getSelection();
-        const range = document.createRange();
-
-        range.selectNodeContents(chat);
-        range.collapse(false);
-
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-
-        return chat;
-    }
+function focusChatComposer(chat: HTMLElement | null) {
+    if (chat && chat.offsetParent !== null) chat.focus();
 }
 
-function isEditable(target: EventTarget | null): boolean {
-    if (!(target instanceof Element)) return false;
-    const el = target as HTMLElement;
-    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") return true;
-    if (el.isContentEditable) return true;
-    return !!el.closest("textarea, input, [contenteditable=true]");
-}
+function placeCaretAtEnd() {
+    const chat = getChatComposer();
+    if (!chat) return;
+    focusChatComposer(chat);
 
-// HELPERS -----------------------------
+    const selection = window.getSelection();
+    const range = document.createRange();
+
+    // range.selectNodeContents(chat);
+    range.collapse(false);
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+}
 
 // scroll behavior should always be instant
 // otherwise there is an animation that gets canceled mid-way and the resulting scroll is slow
-// TODO: add some scrolling with animation magic?
+// could try some magic eventually
 function scrollStep(scroller: HTMLElement, pixels: number) {
     scroller.scrollBy({ top: pixels, behavior: "instant" });
 }
@@ -204,7 +194,6 @@ function scrollHalfPage(scroller: HTMLElement, direction: 1 | -1) {
     scroller.scrollBy({ top: half * direction, behavior: "instant" })
 }
 
-// maybe behavior: smooth on these? - no difference, it scrolls so fast it's instant anyway
 function scrollToTop(scroller: HTMLElement) {
     scroller.scrollBy({ top: -scroller.scrollHeight, behavior: "instant" });
 }
@@ -219,6 +208,18 @@ function setMode(next: Mode) {
     // toastHelper("Changed mode to " + mode, "message");
 }
 
+function checkMode() {
+    if (mode === "normal") {
+        unfocusChatComposer();
+    }
+    else {
+        const chat = getChatComposer();
+        if (!chat) return;
+        focusChatComposer(chat);
+    }
+
+}
+
 // i don't want to retype it every single time
 function toastHelper(msg: string, type: string) {
     Toasts.pop(); // so that it doesn't wait for the previous one
@@ -231,14 +232,17 @@ export default definePlugin({
     authors: [{ name: "strawfrog", id: 254732114409291776n }],
 
     start() {
-        document.addEventListener("keydown", handlekeyPress, true);
+        document.addEventListener("keydown", handleKeyPress, true);
 
-        // add a function for this i cba right now, works fine tho
-        document.addEventListener("focusin", (event) => { if (event.target == getChatInput()) setMode("insert"); });
-        document.addEventListener("focusout", (event) => { if (event.target == getChatInput()) setMode("normal"); });
+        document.addEventListener("focusin", checkMode);
+        document.addEventListener("focusout", checkMode);
     },
 
     stop() {
-        document.removeEventListener("keydown", handlekeyPress, true);
+        document.removeEventListener("keydown", handleKeyPress, true);
+
+        document.removeEventListener("focusin", checkMode);
+        document.removeEventListener("focusout", checkMode);
     },
+
 })
