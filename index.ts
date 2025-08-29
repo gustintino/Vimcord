@@ -4,7 +4,7 @@
 * SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-// TODO: have esc work normally even outside insert mode
+// TODO: have esc work normally, it breaks very often and easily
 // TODO: moving servers
 
 import definePlugin from "@utils/types";
@@ -36,12 +36,32 @@ function handleNormalKeys(event: KeyboardEvent) {
 
     const hasCtrl = event.ctrlKey;
     const hasAlt = event.altKey;
-    const hasShift = event.shiftKey;
-    // const hasMeta = event.metaKey; // yay or nay?
 
-    // TODO: need to refactor all of this ti implement mod keys
-    // if (hasShift) switch(event.key) {
+    if (hasCtrl) {
+        switch (event.key) {
+            case "k":
+                KeyBinds.SERVER_PREV.action(event);
+                break;
+            case "j":
+                KeyBinds.SERVER_NEXT.action(event);
+                break;
+        }
 
+        return;
+    }
+
+    if (hasAlt) {
+        switch (event.key) {
+            case "K":
+                KeyBinds.MENTION_CHANNEL_PREV.action(event);
+                break;
+            case "J":
+                KeyBinds.MENTION_CHANNEL_NEXT.action(event);
+                break;
+        }
+
+        return;
+    }
 
     if (pending === "g") {
         switch (event.key) {
@@ -77,11 +97,9 @@ function handleNormalKeys(event: KeyboardEvent) {
 
         case "J":
             KeyBinds.CHANNEL_NEXT.action(event);
-            unfocusChatComposer();
             break;
         case "K":
             KeyBinds.CHANNEL_PREV.action(event);
-            unfocusChatComposer();
             break;
 
         case "u":
@@ -128,7 +146,7 @@ function isScrollable(element: Element): boolean {
 function getChatScroller(): HTMLElement | null {
     // NOTE: should eventually actually check if for the correct way of finding the main chat, but this works for now
     // also just improve this, it's all over the place
-    //
+
     // find the actual log
     const log = document.querySelector<HTMLElement>('main [data-list-id="chat-messages"]');
     if (log && isScrollable(log)) return log;
@@ -153,7 +171,7 @@ function unfocusChatComposer() {
 function getChatComposer(): HTMLElement | null {
     const chat = document.querySelector<HTMLElement>('main [contenteditable=true][role="textbox"]');
     if (!chat) {
-        toastHelper("chat was not gotten", "message");
+        // toastHelper("chat was not gotten", "message");
         return null;
     }
 
@@ -219,9 +237,9 @@ function checkMode() {
 }
 
 // i don't want to retype it every single time
-function toastHelper(msg: string, type: string) {
+function toastHelper(msg: string) {
     Toasts.pop(); // so that it doesn't wait for the previous one
-    Toasts.show(Toasts.create(msg, type, { position: 1 }));
+    Toasts.show(Toasts.create(msg, "message", { position: 1 }));
 }
 
 export default definePlugin({
