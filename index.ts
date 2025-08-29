@@ -77,7 +77,6 @@ function handleNormalKeys(event: KeyboardEvent) {
 
         case "J":
             KeyBinds.CHANNEL_NEXT.action(event);
-            // FIXME: unfocusing does diddly dick, the switching isn't instant. i need it on a delay somehow
             unfocusChatComposer();
             break;
         case "K":
@@ -97,6 +96,7 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
 
         case "i":
+            setMode("insert");
             placeCaretAtEnd();
             break;
     }
@@ -106,12 +106,10 @@ function handleNormalKeys(event: KeyboardEvent) {
 }
 
 function handleInsertKeys(event: KeyboardEvent) {
-    const scroller = getChatScroller();
-    if (!scroller) return;
 
     switch (event.key) {
         case "Escape":
-            // setMode("normal");
+            setMode("normal");
             unfocusChatComposer();
             event.preventDefault();
             event.stopPropagation();
@@ -154,7 +152,10 @@ function unfocusChatComposer() {
 
 function getChatComposer(): HTMLElement | null {
     const chat = document.querySelector<HTMLElement>('main [contenteditable=true][role="textbox"]');
-    if (!chat) return null;
+    if (!chat) {
+        toastHelper("chat was not gotten", "message");
+        return null;
+    }
 
     return chat;
 }
@@ -171,7 +172,7 @@ function placeCaretAtEnd() {
     const selection = window.getSelection();
     const range = document.createRange();
 
-    // range.selectNodeContents(chat);
+    range.selectNodeContents(chat);
     range.collapse(false);
 
     selection?.removeAllRanges();
