@@ -4,7 +4,8 @@
 * SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-// FIXME: minor but if the channel doesn't have enough messages to scroll, the binds don't work. Perpetually in insert mode
+// TODO: have esc work normally even outside insert mode
+// TODO: moving servers
 
 import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
@@ -27,10 +28,6 @@ function handleKeyPress(event: KeyboardEvent) {
         handleInsertKeys(event);
     }
 }
-
-// NEXT UP
-// TODO: have esc work normally even outside insert mode
-// TODO: moving channels and servers
 
 function handleNormalKeys(event: KeyboardEvent) {
     console.log("Normal key handling being done!");
@@ -166,7 +163,6 @@ function focusChatComposer(chat: HTMLElement | null) {
     if (chat && chat.offsetParent !== null) chat.focus();
 }
 
-// a
 function placeCaretAtEnd() {
     const chat = getChatComposer();
     if (!chat) return;
