@@ -5,7 +5,9 @@
 */
 
 // TODO: have esc work normally, it breaks very often and easily
-// TODO: moving servers
+// TODO: harpoon-like quick-saved servers and/or channels?
+// TODO: quick go to dms
+// TODO: clicks should work normally
 
 import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
@@ -32,7 +34,6 @@ function handleKeyPress(event: KeyboardEvent) {
 function handleNormalKeys(event: KeyboardEvent) {
     console.log("Normal key handling being done!");
     const scroller = getChatScroller();
-    if (!scroller) return;
 
     const hasCtrl = event.ctrlKey;
     const hasAlt = event.altKey;
@@ -200,21 +201,37 @@ function placeCaretAtEnd() {
 // scroll behavior should always be instant
 // otherwise there is an animation that gets canceled mid-way and the resulting scroll is slow
 // could try some magic eventually
-function scrollStep(scroller: HTMLElement, pixels: number) {
+function scrollStep(scroller: HTMLElement | null, pixels: number) {
+    if (!scroller) {
+        toastHelper("scroller was not found");
+        return;
+    }
     scroller.scrollBy({ top: pixels, behavior: "instant" });
 }
 
-function scrollHalfPage(scroller: HTMLElement, direction: 1 | -1) {
+function scrollHalfPage(scroller: HTMLElement | null, direction: 1 | -1) {
+    if (!scroller) {
+        toastHelper("scroller was not found");
+        return;
+    }
     // should play around with the min value here (20)
     let half = Math.max(20, Math.floor(scroller.clientHeight / 2));
     scroller.scrollBy({ top: half * direction, behavior: "instant" })
 }
 
-function scrollToTop(scroller: HTMLElement) {
+function scrollToTop(scroller: HTMLElement | null) {
+    if (!scroller) {
+        toastHelper("scroller was not found");
+        return;
+    }
     scroller.scrollBy({ top: -scroller.scrollHeight, behavior: "instant" });
 }
 
-function scrollToBottom(scroller: HTMLElement) {
+function scrollToBottom(scroller: HTMLElement | null) {
+    if (!scroller) {
+        toastHelper("scroller was not found");
+        return;
+    }
     scroller.scrollBy({ top: scroller.scrollHeight, behavior: "instant" });
 }
 
@@ -244,7 +261,7 @@ function toastHelper(msg: string) {
 
 export default definePlugin({
     name: "Vimcord",
-    description: "Provides keyboard-based navigation and control of Discord in spirit of the Vimium browser extension, which is in spirit of the Vim editor.",
+    description: "Provides keyboard-based navigation and control of Discord in spirit of the Vimium browser extension, which is in spirit of the Vim editor, which is in spirit of the Vi editor, which",
     authors: [{ name: "strawfrog", id: 254732114409291776n }],
 
     start() {
