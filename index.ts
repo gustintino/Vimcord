@@ -125,6 +125,21 @@ function handleNormalKeys(event: KeyboardEvent) {
 }
 
 function handleInsertKeys(event: KeyboardEvent) {
+    const hasCtrl = event.ctrlKey;
+    const hasAlt = event.altKey;
+
+    if (hasCtrl) {
+        switch (event.key) {
+            case "c":
+                setMode("normal");
+                unfocusChatComposer();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+        }
+
+        return;
+    }
 
     switch (event.key) {
         case "Escape":
