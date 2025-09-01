@@ -4,10 +4,12 @@
 * SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-// TODO: have esc work normally, it breaks very often and easily
-// TODO: harpoon-like quick-saved servers and/or channels?
-// TODO: quick go to dms
-// TODO: clicks should work normally
+// TODO:
+// - can't type in gifs (other places as well?)
+// - harpoon-like quick-saved servers and/or channels?
+// - quick go to dms
+// - replace default ctrl-k with something (t maybe?)
+// NOTE: question mark delayed while in insert mode? not sure if even my fault
 
 import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
@@ -19,6 +21,17 @@ let pending: string = "";
 
 const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
 
+function handleMouse(event: MouseEvent) {
+    const chat = getChatComposer();
+    if (chat === null) return;
+    if (chat.contains(event.target as HTMLElement)) {
+        toastHelper("the click works");
+        setMode("insert");
+    }
+
+    checkMode();
+
+}
 
 function handleKeyPress(event: KeyboardEvent) {
     checkMode();
@@ -187,7 +200,7 @@ function unfocusChatComposer() {
 function getChatComposer(): HTMLElement | null {
     const chat = document.querySelector<HTMLElement>('main [contenteditable=true][role="textbox"]');
     if (!chat) {
-        // toastHelper("chat was not gotten", "message");
+        toastHelper("chat was not gotten");
         return null;
     }
 
@@ -281,6 +294,7 @@ export default definePlugin({
 
     start() {
         document.addEventListener("keydown", handleKeyPress, true);
+        document.addEventListener("click", handleMouse, true);
 
         document.addEventListener("focusin", checkMode);
         document.addEventListener("focusout", checkMode);
@@ -288,6 +302,7 @@ export default definePlugin({
 
     stop() {
         document.removeEventListener("keydown", handleKeyPress, true);
+        document.removeEventListener("click", handleMouse, true);
 
         document.removeEventListener("focusin", checkMode);
         document.removeEventListener("focusout", checkMode);
