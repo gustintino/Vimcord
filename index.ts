@@ -131,6 +131,11 @@ function handleNormalKeys(event: KeyboardEvent) {
             setMode("insert");
             placeCaretAtEnd();
             break;
+
+        // resort to default handling. simplest solution
+        // only problem is if in normal scrolling it scroll to the bottom, should be too big of an issue
+        case "Escape":
+            return;
     }
 
     event.preventDefault();
