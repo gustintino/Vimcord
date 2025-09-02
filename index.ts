@@ -4,6 +4,12 @@
 * SPDX-License-Identifier: GPL-3.0-or-later
 */
 
+// TODO: write the readme
+
+// NOTE:
+// - forums lockout
+// - nsfw confirmation lockout
+
 // TODO:
 // - harpoon-like quick-saved servers and/or channels?
 // - quick go to dms
