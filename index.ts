@@ -13,7 +13,12 @@
 // TODO:
 // - harpoon-like quick-saved servers and/or channels?
 // - quick go to dms
-// - add click to lose focus as well
+// - small label indicating mode and current focus?
+// - edit and reply to message? not sure how tho -> check quick reply plugin
+//
+// - visual hints (no clue how to do this, need to search)
+// - h/l move focus from main chat to channels/servers/users? need to have hints by then
+// - check what https://github.com/CyR1en/VimCord?tab=readme-ov-file has been up to
 
 import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
@@ -82,25 +87,33 @@ function handleNormalKeys(event: KeyboardEvent) {
     if (hasCtrl) {
         switch (event.key) {
             case "k":
-                KeyBinds.SERVER_PREV.action(event);
+                KeyBinds.CHANNEL_PREV.action(event);
                 break;
             case "j":
-                KeyBinds.SERVER_NEXT.action(event);
+                KeyBinds.CHANNEL_NEXT.action(event);
                 break;
         }
+
+        event.preventDefault();
+        event.stopPropagation();
 
         return;
     }
 
-    if (hasAlt) {
+    if (hasCtrl && hasAlt) {
         switch (event.key) {
-            case "K":
+            case "k":
                 KeyBinds.MENTION_CHANNEL_PREV.action(event);
                 break;
-            case "J":
+            case "j":
                 KeyBinds.MENTION_CHANNEL_NEXT.action(event);
                 break;
 
+        }
+    }
+
+    if (hasAlt) {
+        switch (event.key) {
             case "k":
                 KeyBinds.UNREAD_PREV.action(event);
                 break;
@@ -108,6 +121,9 @@ function handleNormalKeys(event: KeyboardEvent) {
                 KeyBinds.UNREAD_NEXT.action(event);
                 break;
         }
+
+        event.preventDefault();
+        event.stopPropagation();
 
         return;
     }
@@ -145,10 +161,10 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
 
         case "J":
-            KeyBinds.CHANNEL_NEXT.action(event);
+            KeyBinds.SERVER_PREV.action(event);
             break;
         case "K":
-            KeyBinds.CHANNEL_PREV.action(event);
+            KeyBinds.SERVER_NEXT.action(event);
             break;
 
         case "u":
