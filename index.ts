@@ -5,37 +5,60 @@
 */
 
 // TODO:
-// - can't type in gifs (other places as well?)
 // - harpoon-like quick-saved servers and/or channels?
 // - quick go to dms
-// - replace default ctrl-k with something (t maybe?)
-// NOTE: question mark delayed while in insert mode? not sure if even my fault
+// - add click to lose focus as well
 
 import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
 
+type Context = "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal";
+let context: Context = "chat";
 type Mode = "insert" | "normal";
 let mode: Mode = "normal";
 let pending: string = "";
 
 const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
 
-function handleMouse(event: MouseEvent) {
-    const chat = getChatComposer();
-    if (chat === null) return;
-    if (chat.contains(event.target as HTMLElement)) {
-        toastHelper("the click works");
-        setMode("insert");
-    }
+function contextHandler(event: KeyboardEvent) {
+    const active = document.activeElement;
 
-    checkMode();
+    //fugly
+    if (active?.ariaLabel === "Quick Switcher" && checkForModal()) context = "quickswitch";
+    else if (checkForModal()) context = "modal";
+    else if (active?.contains(getChatScroller()) || active?.contains(getChatComposer())) context = "chat";
+    else return; // if not recognised, just stop and use default keybindings, prevents lockouts
+
+    // toastHelper("current context is " + context);
+
+    switch (context) {
+        case "chat":
+            handleKeyPress(event);
+            break;
+
+        case "quickswitch":
+            quickswitchControls(event);
+            break;
+    }
 
 }
 
-function handleKeyPress(event: KeyboardEvent) {
-    checkMode();
+function quickswitchControls(event: KeyboardEvent) {
+    const hasCtrl = event.ctrlKey;
 
+    // way less needed here than originally thought, ctrl+n and ctrl+p are already defaults (good job discord!)
+    // i will leave this here just in case it's ever needed
+    if (hasCtrl) {
+        switch (event.key) {
+            case "y":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                break;
+        }
+    }
+}
+
+function handleKeyPress(event: KeyboardEvent) {
     if (mode === "normal") {
         handleNormalKeys(event);
     }
@@ -45,7 +68,6 @@ function handleKeyPress(event: KeyboardEvent) {
 }
 
 function handleNormalKeys(event: KeyboardEvent) {
-    console.log("Normal key handling being done!");
     const scroller = getChatScroller();
 
     const hasCtrl = event.ctrlKey;
@@ -71,6 +93,13 @@ function handleNormalKeys(event: KeyboardEvent) {
                 break;
             case "J":
                 KeyBinds.MENTION_CHANNEL_NEXT.action(event);
+                break;
+
+            case "k":
+                KeyBinds.UNREAD_PREV.action(event);
+                break;
+            case "j":
+                KeyBinds.UNREAD_NEXT.action(event);
                 break;
         }
 
@@ -132,10 +161,18 @@ function handleNormalKeys(event: KeyboardEvent) {
             placeCaretAtEnd();
             break;
 
+        case "t":
+            KeyBinds.QUICKSWITCHER_SHOW.action(event);
+            break;
+
         // resort to default handling. simplest solution
-        // only problem is if in normal scrolling it scroll to the bottom, should be too big of an issue
+        // only problem is if in normal scrolling it scrolls to the bottom, shouldn't be too big of an issue
         case "Escape":
             return;
+
+        // TODO: should change this so that preventDefault and stopPropagation are in each case
+        // this way there can be a default option for everything else instead of having to specify
+        // oooorrrrrrrrrrrrrrrrrrrrrrrrr maybe i want this? need to think through
     }
 
     event.preventDefault();
@@ -144,7 +181,7 @@ function handleNormalKeys(event: KeyboardEvent) {
 
 function handleInsertKeys(event: KeyboardEvent) {
     const hasCtrl = event.ctrlKey;
-    const hasAlt = event.altKey;
+    // const hasAlt = event.altKey;
 
     if (hasCtrl) {
         switch (event.key) {
@@ -169,6 +206,23 @@ function handleInsertKeys(event: KeyboardEvent) {
     }
 }
 
+function handleMouse(event: MouseEvent) {
+    const chat = getChatComposer();
+    if (chat === null) return;
+    if (chat.contains(event.target as HTMLElement)) {
+        // toastHelper("the click works");
+        setMode("insert");
+    }
+
+    checkMode();
+}
+
+function checkForModal(): boolean {
+    const modal = document.querySelector('[aria-modal="true"]');
+    if (modal) return true;
+    else return false;
+}
+
 function isScrollable(element: Element): boolean {
     const style = getComputedStyle(element);
     const canScrollY = style.overflowY === "auto" || style.overflowY === "scroll";
@@ -177,21 +231,9 @@ function isScrollable(element: Element): boolean {
 }
 
 // rename this
-function getChatScroller(): HTMLElement | null {
-    // NOTE: should eventually actually check if for the correct way of finding the main chat, but this works for now
-    // also just improve this, it's all over the place
-
-    // find the actual log
-    const log = document.querySelector<HTMLElement>('main [data-list-id="chat-messages"]');
+function getChatScroller(): Element | null {
+    const log = document.querySelector('main [role="group"][data-jump-section="global"]');
     if (log && isScrollable(log)) return log;
-
-    // fallback in case we don't find it
-    const main = document.querySelector("main");
-    if (!main) return null;
-    const elements = document.querySelectorAll<HTMLElement>("div");
-    for (const element of elements) {
-        if (isScrollable(element) && element.role === "group") return element;
-    }
 
     return null;
 }
@@ -205,7 +247,7 @@ function unfocusChatComposer() {
 function getChatComposer(): HTMLElement | null {
     const chat = document.querySelector<HTMLElement>('main [contenteditable=true][role="textbox"]');
     if (!chat) {
-        toastHelper("chat was not gotten");
+        // toastHelper("chat was not gotten");
         return null;
     }
 
@@ -234,7 +276,7 @@ function placeCaretAtEnd() {
 // scroll behavior should always be instant
 // otherwise there is an animation that gets canceled mid-way and the resulting scroll is slow
 // could try some magic eventually
-function scrollStep(scroller: HTMLElement | null, pixels: number) {
+function scrollStep(scroller: Element | null, pixels: number) {
     if (!scroller) {
         toastHelper("scroller was not found");
         return;
@@ -242,7 +284,7 @@ function scrollStep(scroller: HTMLElement | null, pixels: number) {
     scroller.scrollBy({ top: pixels, behavior: "instant" });
 }
 
-function scrollHalfPage(scroller: HTMLElement | null, direction: 1 | -1) {
+function scrollHalfPage(scroller: Element | null, direction: 1 | -1) {
     if (!scroller) {
         toastHelper("scroller was not found");
         return;
@@ -252,7 +294,7 @@ function scrollHalfPage(scroller: HTMLElement | null, direction: 1 | -1) {
     scroller.scrollBy({ top: half * direction, behavior: "instant" })
 }
 
-function scrollToTop(scroller: HTMLElement | null) {
+function scrollToTop(scroller: Element | null) {
     if (!scroller) {
         toastHelper("scroller was not found");
         return;
@@ -260,7 +302,7 @@ function scrollToTop(scroller: HTMLElement | null) {
     scroller.scrollBy({ top: -scroller.scrollHeight, behavior: "instant" });
 }
 
-function scrollToBottom(scroller: HTMLElement | null) {
+function scrollToBottom(scroller: Element | null) {
     if (!scroller) {
         toastHelper("scroller was not found");
         return;
@@ -274,6 +316,7 @@ function setMode(next: Mode) {
     // toastHelper("Changed mode to " + mode, "message");
 }
 
+// this bad boy will get expanded
 function checkMode() {
     if (mode === "normal") {
         unfocusChatComposer();
@@ -298,7 +341,7 @@ export default definePlugin({
     authors: [{ name: "strawfrog", id: 254732114409291776n }],
 
     start() {
-        document.addEventListener("keydown", handleKeyPress, true);
+        document.addEventListener("keydown", contextHandler, true);
         document.addEventListener("click", handleMouse, true);
 
         document.addEventListener("focusin", checkMode);
@@ -306,7 +349,7 @@ export default definePlugin({
     },
 
     stop() {
-        document.removeEventListener("keydown", handleKeyPress, true);
+        document.removeEventListener("keydown", contextHandler, true);
         document.removeEventListener("click", handleMouse, true);
 
         document.removeEventListener("focusin", checkMode);
