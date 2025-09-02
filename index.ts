@@ -219,6 +219,11 @@ function handleMouse(event: MouseEvent) {
         // toastHelper("the click works");
         setMode("insert");
     }
+    else {
+        if (mode === "insert") {
+            setMode("normal");
+        }
+    }
 
     checkMode();
 }
