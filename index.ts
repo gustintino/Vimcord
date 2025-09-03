@@ -24,7 +24,7 @@ import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
 
-type Context = "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal";
+type Context = "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms";
 let context: Context = "chat";
 type Mode = "insert" | "normal";
 let mode: Mode = "normal";
@@ -38,10 +38,10 @@ function contextHandler(event: KeyboardEvent) {
     //fugly
     if (active?.ariaLabel === "Quick Switcher" && checkForModal()) context = "quickswitch";
     else if (checkForModal()) context = "modal";
-    else if (active?.contains(getChatScroller()) || active?.contains(getChatComposer())) context = "chat";
-    else return; // if not recognised, just stop and use default keybindings, prevents lockouts
-
-    // toastHelper("current context is " + context);
+    else if (getChatScroller()?.contains((event.target as Node)) || active?.contains(getChatComposer())) context = "chat"; // messy
+    else {
+        return
+    }
 
     switch (context) {
         case "chat":
@@ -58,7 +58,7 @@ function contextHandler(event: KeyboardEvent) {
 function quickswitchControls(event: KeyboardEvent) {
     const hasCtrl = event.ctrlKey;
 
-    // way less needed here than originally thought, ctrl+n and ctrl+p are already defaults (good job discord!)
+    // way less needed here than originally thought, ctrl+n and ctrl+p are already defaults (good jobe discord!)
     // i will leave this here just in case it's ever needed
     if (hasCtrl) {
         switch (event.key) {
@@ -232,7 +232,6 @@ function handleMouse(event: MouseEvent) {
     const chat = getChatComposer();
     if (chat === null) return;
     if (chat.contains(event.target as HTMLElement)) {
-        // toastHelper("the click works");
         setMode("insert");
     }
     else {
