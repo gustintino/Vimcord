@@ -12,7 +12,7 @@
 
 // TODO:
 // - harpoon-like quick-saved servers and/or channels?
-// - quick go to dms
+// - quick go to dms, also actually recognizing the dm context, it soft locks now
 // - small label indicating mode and current focus?
 // - edit and reply to message? not sure how tho -> check quick reply plugin
 //
@@ -23,6 +23,7 @@
 import definePlugin from "@utils/types";
 import { Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
+import quickReply from "plugins/quickReply";
 
 type Context = "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms";
 let context: Context = "chat";
@@ -38,10 +39,8 @@ function contextHandler(event: KeyboardEvent) {
     //fugly
     if (active?.ariaLabel === "Quick Switcher" && checkForModal()) context = "quickswitch";
     else if (checkForModal()) context = "modal";
-    else if (getChatScroller()?.contains((event.target as Node)) || active?.contains(getChatComposer())) context = "chat"; // messy
-    else {
-        return
-    }
+    else if (getChatScroller()?.contains((event.target as Node)) || active?.contains(getChatComposer())) context = "chat";
+    else return;
 
     switch (context) {
         case "chat":
@@ -150,7 +149,6 @@ function handleNormalKeys(event: KeyboardEvent) {
     switch (event.key) {
         case "g":
             pending = "g";
-            // toastHelper('Current pending key is: ' + pending, "message");
             break;
 
         case "j":
@@ -161,10 +159,10 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
 
         case "J":
-            KeyBinds.SERVER_PREV.action(event);
+            KeyBinds.SERVER_NEXT.action(event);
             break;
         case "K":
-            KeyBinds.SERVER_NEXT.action(event);
+            KeyBinds.SERVER_PREV.action(event);
             break;
 
         case "u":
@@ -203,7 +201,7 @@ function handleNormalKeys(event: KeyboardEvent) {
 
 function handleInsertKeys(event: KeyboardEvent) {
     const hasCtrl = event.ctrlKey;
-    // const hasAlt = event.altKey;
+    const hasAlt = event.altKey;
 
     if (hasCtrl) {
         switch (event.key) {
@@ -213,10 +211,38 @@ function handleInsertKeys(event: KeyboardEvent) {
                 event.preventDefault();
                 event.stopPropagation();
                 break;
+
+            // simulates a key press for the quck-reply plugin
+            case "k":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, ctrlKey: true }));
+                // event.preventDefault();
+                event.stopPropagation();
+                break;
+            case "j":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, ctrlKey: true }));
+                // event.preventDefault();
+                event.stopPropagation();
+                break;
+
         }
 
         return;
     }
+
+    // simulates a key press for the quck-reply plugin
+    if (hasAlt) {
+        switch (event.key) {
+            case "k":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, ctrlKey: true, shiftKey: true }));
+                event.stopPropagation();
+                break;
+            case "j":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, ctrlKey: true, shiftKey: true }));
+                event.stopPropagation();
+                break;
+        }
+    }
+
 
     switch (event.key) {
         case "Escape":
@@ -342,7 +368,6 @@ function setMode(next: Mode) {
     // toastHelper("Changed mode to " + mode, "message");
 }
 
-// this bad boy will get expanded
 function checkMode() {
     if (mode === "normal") {
         unfocusChatComposer();
