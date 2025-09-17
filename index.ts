@@ -12,8 +12,9 @@
 // - no typing perms lockout
 
 // TODO:
-// - small label indicating mode and current focus?
+// - add context to indicator area
 // - gifs and other contexts
+// - esc-ing from modal breaks insert/normal mode
 //
 // - harpoon-like quick-saved servers and/or channels?
 // - try making the quick-reply plugin functionalities myself?
@@ -21,14 +22,18 @@
 // - h/l move focus from main chat to channels/servers/users? need to have hints by then
 // - check what https://github.com/CyR1en/VimCord?tab=readme-ov-file has been up to
 
+// FIXME:
+// - clicking sets the context to 'unknown'
+
 import definePlugin from "@utils/types";
 import { ChannelRouter, ChannelStore, Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
+import { sleep } from "@utils/misc";
 
-type ContextType = "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms";
+type ContextType = "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "unknown";
 let context: ContextType = "chat";
-type Mode = "insert" | "normal";
-let mode: Mode = "normal";
+type Mode = "Insert" | "Normal";
+let mode: Mode = "Normal";
 let pending: string = "";
 let observer: MutationObserver | null = null;
 
@@ -38,7 +43,9 @@ const contextSearch = {
     mainChat: 'main [role="group"][data-jump-section="global"]',
     chatComposer: 'main [contenteditable=true][role="textbox"]',
     firstDM: '[aria-posinset="6"]',
-    userArea: '[aria-label="User area"]'
+    userArea: '[aria-label="User area"]',
+    vimcordIndicator: '.vimcord-indicator'
+
     // add settings
     // add pins?
     // add gifs
@@ -49,14 +56,6 @@ const contextSearch = {
 const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
 
 function contextHandler(event: KeyboardEvent) {
-    const active = document.activeElement;
-
-    //fugly
-    if (active?.ariaLabel === "Quick Switcher" && checkForModal()) context = "quickswitch";
-    else if (checkForModal()) context = "modal";
-    else if (checkForDms()) context = "dms"
-    else if (getChatScroller()?.contains((event.target as Node)) || active?.contains(getChatComposer())) context = "chat";
-    else return;
 
     switch (context) {
         case "chat":
@@ -67,14 +66,27 @@ function contextHandler(event: KeyboardEvent) {
         case "quickswitch":
             quickswitchControls(event);
             break;
+
+        case "modal":
+            switch (event.key) {
+                case "Escape":
+                    checkModeAndContext();
+                    break;
+
+                default:
+                    event.stopPropagation();
+                    event.preventDefault();
+                    break;
+            }
+            break;
     }
 
 }
 
 function checkForDms(): boolean {
-    document.querySelector(contextSearch.dms);
-
-    return true; // temp
+    const dms = document.querySelector(contextSearch.dms);
+    if (!dms) return false;
+    else return true;
 }
 
 function goToFirstDm() {
@@ -96,10 +108,10 @@ function quickswitchControls(event: KeyboardEvent) {
 }
 
 function handleKeyPress(event: KeyboardEvent) {
-    if (mode === "normal") {
+    if (mode === "Normal") {
         handleNormalKeys(event);
     }
-    else if (mode === "insert") {
+    else if (mode === "Insert") {
         handleInsertKeys(event);
     }
 }
@@ -158,7 +170,6 @@ function handleNormalKeys(event: KeyboardEvent) {
         switch (event.key) {
             case "g":
                 pending = "";
-                // toastHelper("scroll to top", "message");
                 scrollToTop(scroller);
                 break;
 
@@ -208,7 +219,7 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
 
         case "i":
-            setMode("insert");
+            setMode("Insert");
             placeCaretAtEnd();
             break;
 
@@ -221,9 +232,6 @@ function handleNormalKeys(event: KeyboardEvent) {
         case "Escape":
             return;
 
-        // TODO: should change this so that preventDefault and stopPropagation are in each case
-        // this way there can be a default option for everything else instead of having to specify
-        // oooorrrrrrrrrrrrrrrrrrrrrrrrr maybe i want this? need to think through
     }
 
     event.preventDefault();
@@ -237,7 +245,7 @@ function handleInsertKeys(event: KeyboardEvent) {
     if (hasCtrl) {
         switch (event.key) {
             case "c":
-                setMode("normal");
+                setMode("Normal");
                 unfocusChatComposer();
                 event.preventDefault();
                 event.stopPropagation();
@@ -275,7 +283,7 @@ function handleInsertKeys(event: KeyboardEvent) {
 
     switch (event.key) {
         case "Escape":
-            setMode("normal");
+            setMode("Normal");
             unfocusChatComposer();
             event.preventDefault();
             event.stopPropagation();
@@ -287,15 +295,15 @@ function handleMouse(event: MouseEvent) {
     const chat = getChatComposer();
     if (chat === null) return;
     if (chat.contains(event.target as HTMLElement)) {
-        setMode("insert");
+        setMode("Insert");
     }
     else {
-        if (mode === "insert") {
-            setMode("normal");
+        if (mode === "Insert") {
+            setMode("Normal");
         }
     }
 
-    checkMode();
+    checkModeAndContext();
 }
 
 function checkForModal(): boolean {
@@ -329,7 +337,6 @@ function unfocusChatComposer() {
 function getChatComposer(): HTMLElement | null {
     const chat = document.querySelector<HTMLElement>(contextSearch.chatComposer);
     if (!chat) {
-        // toastHelper("chat was not gotten");
         return null;
     }
 
@@ -355,8 +362,7 @@ function placeCaretAtEnd() {
     selection?.addRange(range);
 }
 
-// scroll behavior should always be instant
-// if smooth there is an animation that gets canceled mid-way and the resulting scroll is slow
+// scroll behavior should always be instant because of smooth scroll animation
 function scrollStep(scroller: Element | null, pixels: number) {
     if (!scroller) {
         toastHelper("scroller was not found");
@@ -394,11 +400,24 @@ function scrollToBottom(scroller: Element | null) {
 function setMode(next: Mode) {
     mode = next;
     pending = "";
-    // toastHelper("Changed mode to " + mode, "message");
+    updateModeIndicator();
 }
 
-function checkMode() {
-    if (mode === "normal") {
+function checkModeAndContext() {
+    const active = document.activeElement;
+
+    //fugly
+    if (active?.ariaLabel === "Quick Switcher" && checkForModal()) context = "quickswitch";
+    else if (active?.contains(getChatComposer())) context = "chat";
+    else if (checkForDms()) context = "dms"
+    else if (checkForModal()) context = "modal"; // FIXME: kinda fixes the bug, but should still find a better way of doing this
+    else context = "unknown";
+
+    // this is all over the place right now but i just want it to update on time
+    updateModeIndicator();
+    toastHelper("testing");
+
+    if (mode === "Normal") {
         unfocusChatComposer();
     }
     else {
@@ -409,51 +428,62 @@ function checkMode() {
 
 }
 
-// i don't want to retype it every single time
 function toastHelper(msg: string) {
-    Toasts.pop(); // so that it doesn't wait for the previous one
+    Toasts.pop();
     Toasts.show(Toasts.create(msg, "message", { position: 1 }));
 }
 
-function attachModeIndicator() {
-    const userArea = document.querySelector(contextSearch.userArea);
-    if (!userArea) return;
+function getOrCreateModeIndicator(userArea: Element): Element {
+    const existing = userArea.querySelector(contextSearch.vimcordIndicator);
 
-    const existing = userArea.querySelector('.vimcord-indicator');
-    if (existing) return;
+    if (existing) return existing;
+    else {
+        const el = document.createElement("div");
+        el.className = "vimcord-indicator";
+        el.textContent = `${mode} | Context: ${context}`;
 
-    const el = document.createElement("div");
-    el.className = "vimcord-indicator";
-    el.textContent = "Mode: " + mode;
-    el.style.display = "inline-block";
-    el.style.color = "white";
-    el.style.marginLeft = "4px";
+        // STYLING
+        // el.style.display = "inline-block";
+        el.style.color = "white";
+        el.style.padding = '4px 8px';
+        el.style.width = '100%';
+        el.style.boxSizing = 'border-box';
+        el.style.whiteSpace = 'nowrap';
+        el.style.overflow = 'hidden';
+        el.style.textOverflow = 'ellipsis';
+        el.style.fontSize = '15px';
 
-    userArea.appendChild(el);
+        userArea.appendChild(el);
+
+        return el;
+    }
 }
 
 function updateModeIndicator() {
+    const userArea = document.querySelector(contextSearch.userArea);
+    if (!userArea) return;
 
+    const el = getOrCreateModeIndicator(userArea);
+    el.textContent = `${mode} | Context: ${context}`;
 }
 
 export default definePlugin({
     name: "Vimcord",
-    description: "Provides keyboard-based navigation and control of Discord in spirit of the Vimium browser extension, which is in spirit of the Vim editor, which is in spirit of the Vi editor, which",
+    description: "Provides keyboard-based navigation and control of Discord in spirit of the Vimium browser extension, which is in spirit of the Vim editor.",
     authors: [{ name: "strawfrog", id: 254732114409291776n }],
 
     start() {
         document.addEventListener("keydown", contextHandler, true);
         document.addEventListener("click", handleMouse, true);
 
-        document.addEventListener("focusin", checkMode);
-        document.addEventListener("focusout", checkMode);
+        document.addEventListener("focusin", checkModeAndContext);
+        document.addEventListener("focusout", checkModeAndContext);
 
-        if (observer) observer.disconnect();
-
+        observer?.disconnect();
         observer = new MutationObserver(() => {
-            attachModeIndicator();
-            // updateModeIndicator();
-        })
+            // checkModeAndContext(); // breaks everything? don't use?
+            updateModeIndicator();
+        });
         observer.observe(document.body, { childList: true, subtree: true });
     },
 
@@ -461,8 +491,10 @@ export default definePlugin({
         document.removeEventListener("keydown", contextHandler, true);
         document.removeEventListener("click", handleMouse, true);
 
-        document.removeEventListener("focusin", checkMode);
-        document.removeEventListener("focusout", checkMode);
+        document.removeEventListener("focusin", checkModeAndContext);
+        document.removeEventListener("focusout", checkModeAndContext);
+
+        observer?.disconnect();
     },
 
 })
