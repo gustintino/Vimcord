@@ -6,19 +6,14 @@
 
 // TODO: write the readme
 
-// NOTE:
-// - nsfw confirmation lockout
-
 // TODO:
-// - gifs and other contexts
+// - gifs and emoji navigation (or at least no lockout)
 //
 // - harpoon-like quick-saved servers and/or channels?
 // - try making the quick-reply plugin functionalities myself?
 // - visual hints (no clue how to do this, need to search)
 // - h/l move focus from main chat to channels/servers/users? need to have hints by then
 // - check what https://github.com/CyR1en/VimCord?tab=readme-ov-file has been up to
-
-// FIXME:
 
 import definePlugin from "@utils/types";
 import { ChannelRouter, ChannelStore, Toasts } from "@webpack/common";
@@ -47,10 +42,11 @@ const contextSearch = {
     settings: '[data-layer="USER_SETTINGS"]',
     nsfw: '[data-text-variant="text-lg/semibold"]'
 
-    // add pins?
     // add gifs
-    // add stickers?
     // add emojis
+    // add searching
+    // add pins?
+    // add stickers?
 };
 
 function contextHandler(event: KeyboardEvent) {
