@@ -7,14 +7,10 @@
 // TODO: write the readme
 
 // NOTE:
-// - forums lockout
 // - nsfw confirmation lockout
-// - no typing perms lockout
 
 // TODO:
-// - add context to indicator area
 // - gifs and other contexts
-// - esc-ing from modal breaks insert/normal mode
 //
 // - harpoon-like quick-saved servers and/or channels?
 // - try making the quick-reply plugin functionalities myself?
@@ -23,13 +19,12 @@
 // - check what https://github.com/CyR1en/VimCord?tab=readme-ov-file has been up to
 
 // FIXME:
-// - clicking sets the context to 'unknown'
 
 import definePlugin from "@utils/types";
 import { ChannelRouter, ChannelStore, Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
 
-type ContextType = "chat composer" | "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "unknown";
+type ContextType = "chat composer" | "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "forums" | "unknown" | "settings" | "nsfw";
 let context: ContextType = "chat";
 type Mode = "Insert" | "Normal";
 let mode: Mode = "Normal";
@@ -46,9 +41,12 @@ const contextSearch = {
     firstDM: '[aria-posinset="6"]',
     userArea: '[aria-label="User area"]',
     vimcordIndicator: '.vimcord-indicator',
-    quickswitch: '[aria-label="Quick Switcher"]'
+    quickswitch: '[aria-label="Quick Switcher"]',
+    noPermChat: '[aria-label="You do not have permission to send messages in this channel."]',
+    forums: '[role="list"]',  // is this enough tho
+    settings: '[data-layer="USER_SETTINGS"]',
+    nsfw: '[data-text-variant="text-lg/semibold"]'
 
-    // add settings
     // add pins?
     // add gifs
     // add stickers?
@@ -60,8 +58,10 @@ function contextHandler(event: KeyboardEvent) {
 
     switch (context) {
         case "chat":
-        case "dms": // just so no softlock, i don't think it needs any controls
+        case "dms":
         case "chat composer":
+        case "forums":
+        case "nsfw":
             handleKeyPress(event);
             break;
 
@@ -80,6 +80,9 @@ function contextHandler(event: KeyboardEvent) {
                     event.preventDefault();
                     break;
             }
+            break;
+
+        default:
             break;
     }
 
@@ -322,12 +325,10 @@ function isScrollable(element: Element): boolean {
     return canScrollY && element.scrollHeight > element.clientHeight;
 }
 
-// rename this
 function getMainChat(): Element | null {
     const log = document.querySelector(contextSearch.mainChat);
-    if (log && isScrollable(log)) return log;
-
-    return null;
+    if (log) return log;
+    else return null;
 }
 
 function unfocusChatComposer() {
@@ -417,10 +418,13 @@ function updateModeIndicator() {
 function checkModeAndContext() {
     const active = document.activeElement;
 
-    if (document.querySelector(contextSearch.quickswitch)) context = "quickswitch";
-    else if (getMainChat()?.contains(active) || getChatComposer()) context = "chat";
+    if (document.querySelector(contextSearch.settings)) context = "settings";
+    else if (document.querySelector(contextSearch.nsfw)) context = "nsfw";
+    else if (document.querySelector(contextSearch.quickswitch)) context = "quickswitch";
+    else if (checkForModal()) context = "modal";
+    else if (getMainChat() || getMainChat()?.contains(active) || getChatComposer()) context = "chat";
     else if (checkForDms()) context = "dms"
-    else if (checkForModal()) context = "modal"; // FIXME: kinda fixes the bug, but should still find a better way of doing this
+    else if (document.querySelector(contextSearch.forums)) context = "forums";
     else {
         console.log(document.activeElement);
         context = "unknown";
