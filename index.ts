@@ -5,7 +5,7 @@
 */
 
 // TODO: write the readme
-
+//
 // TODO:
 // - gifs and emoji navigation (or at least no lockout)
 //
@@ -16,7 +16,7 @@
 // - check what https://github.com/CyR1en/VimCord?tab=readme-ov-file has been up to
 
 import definePlugin from "@utils/types";
-import { ChannelRouter, ChannelStore, Toasts } from "@webpack/common";
+import { ChannelRouter, ChannelStore, ExpressionPickerStore, Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
 
 type ContextType = "chat composer" | "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "forums" | "unknown" | "settings" | "nsfw";
@@ -40,13 +40,14 @@ const contextSearch = {
     noPermChat: '[aria-label="You do not have permission to send messages in this channel."]',
     forums: '[role="list"]',  // is this enough tho
     settings: '[data-layer="USER_SETTINGS"]',
-    nsfw: '[data-text-variant="text-lg/semibold"]'
+    nsfw: '[data-text-variant="text-lg/semibold"]',
+    gifs: '[id="gif-picker-tab-panel"]',
+    stickers: '[id="sticker-picker-tab-panel"]',
+    emojis: '[id="emoji-picker-tab-panel"]'
 
-    // add gifs
-    // add emojis
+
     // add searching
-    // add pins?
-    // add stickers?
+    // add pins
 };
 
 function contextHandler(event: KeyboardEvent) {
@@ -78,10 +79,21 @@ function contextHandler(event: KeyboardEvent) {
             }
             break;
 
+        case "gifs":
+        case "stickers":
+        case "emojis":
+
+            break;
+
         default:
             break;
     }
 
+}
+
+// yippieee found it
+function gifMovement() {
+    ExpressionPickerStore.openExpressionPicker("gif");
 }
 
 function handleMouse(event: MouseEvent) {
@@ -417,6 +429,9 @@ function checkModeAndContext() {
     if (document.querySelector(contextSearch.settings)) context = "settings";
     else if (document.querySelector(contextSearch.nsfw)) context = "nsfw";
     else if (document.querySelector(contextSearch.quickswitch)) context = "quickswitch";
+    else if (document.querySelector(contextSearch.gifs)) context = "gifs";
+    else if (document.querySelector(contextSearch.stickers)) context = "stickers";
+    else if (document.querySelector(contextSearch.emojis)) context = "emojis";
     else if (checkForModal()) context = "modal";
     else if (getMainChat() || getMainChat()?.contains(active) || getChatComposer()) context = "chat";
     else if (checkForDms()) context = "dms"
