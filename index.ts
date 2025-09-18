@@ -28,14 +28,15 @@
 import definePlugin from "@utils/types";
 import { ChannelRouter, ChannelStore, Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
-import { sleep } from "@utils/misc";
 
-type ContextType = "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "unknown";
+type ContextType = "chat composer" | "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "unknown";
 let context: ContextType = "chat";
 type Mode = "Insert" | "Normal";
 let mode: Mode = "Normal";
 let pending: string = "";
 let observer: MutationObserver | null = null;
+
+const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
 
 const contextSearch = {
     dms: '[class="peopleColumn__133bf"]',
@@ -44,7 +45,8 @@ const contextSearch = {
     chatComposer: 'main [contenteditable=true][role="textbox"]',
     firstDM: '[aria-posinset="6"]',
     userArea: '[aria-label="User area"]',
-    vimcordIndicator: '.vimcord-indicator'
+    vimcordIndicator: '.vimcord-indicator',
+    quickswitch: '[aria-label="Quick Switcher"]'
 
     // add settings
     // add pins?
@@ -53,13 +55,13 @@ const contextSearch = {
     // add emojis
 };
 
-const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
-
 function contextHandler(event: KeyboardEvent) {
+    checkModeAndContext();
 
     switch (context) {
         case "chat":
         case "dms": // just so no softlock, i don't think it needs any controls
+        case "chat composer":
             handleKeyPress(event);
             break;
 
@@ -81,6 +83,22 @@ function contextHandler(event: KeyboardEvent) {
             break;
     }
 
+}
+
+function handleMouse(event: MouseEvent) {
+    const chat = getChatComposer();
+    if (!chat) return;
+    if (chat.contains(event.target as HTMLElement)) {
+        setMode("Insert");
+    }
+    else {
+        checkModeAndContext();
+        if (mode === "Insert") {
+            setMode("Normal");
+        }
+    }
+
+    checkModeAndContext();
 }
 
 function checkForDms(): boolean {
@@ -117,7 +135,7 @@ function handleKeyPress(event: KeyboardEvent) {
 }
 
 function handleNormalKeys(event: KeyboardEvent) {
-    const scroller = getChatScroller();
+    const chat = getMainChat();
 
     const hasCtrl = event.ctrlKey;
     const hasAlt = event.altKey;
@@ -170,7 +188,7 @@ function handleNormalKeys(event: KeyboardEvent) {
         switch (event.key) {
             case "g":
                 pending = "";
-                scrollToTop(scroller);
+                scrollToTop(chat);
                 break;
 
             case "d":
@@ -194,10 +212,10 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
 
         case "j":
-            scrollStep(scroller, +60);
+            scrollStep(chat, +60);
             break;
         case "k":
-            scrollStep(scroller, -60);
+            scrollStep(chat, -60);
             break;
 
         case "J":
@@ -208,14 +226,14 @@ function handleNormalKeys(event: KeyboardEvent) {
             break;
 
         case "u":
-            scrollHalfPage(scroller, -1);
+            scrollHalfPage(chat, -1);
             break;
         case "d":
-            scrollHalfPage(scroller, 1);
+            scrollHalfPage(chat, 1);
             break;
 
         case "G":
-            scrollToBottom(scroller);
+            scrollToBottom(chat);
             break;
 
         case "i":
@@ -291,21 +309,6 @@ function handleInsertKeys(event: KeyboardEvent) {
     }
 }
 
-function handleMouse(event: MouseEvent) {
-    const chat = getChatComposer();
-    if (chat === null) return;
-    if (chat.contains(event.target as HTMLElement)) {
-        setMode("Insert");
-    }
-    else {
-        if (mode === "Insert") {
-            setMode("Normal");
-        }
-    }
-
-    checkModeAndContext();
-}
-
 function checkForModal(): boolean {
     const modal = document.querySelector(contextSearch.modal);
     if (modal) return true;
@@ -320,7 +323,7 @@ function isScrollable(element: Element): boolean {
 }
 
 // rename this
-function getChatScroller(): Element | null {
+function getMainChat(): Element | null {
     const log = document.querySelector(contextSearch.mainChat);
     if (log && isScrollable(log)) return log;
 
@@ -403,19 +406,25 @@ function setMode(next: Mode) {
     updateModeIndicator();
 }
 
+function updateModeIndicator() {
+    const userArea = document.querySelector(contextSearch.userArea);
+    if (!userArea) return;
+
+    const el = getOrCreateModeIndicator(userArea);
+    el.textContent = `${mode} | Context: ${context}`;
+}
+
 function checkModeAndContext() {
     const active = document.activeElement;
 
-    //fugly
-    if (active?.ariaLabel === "Quick Switcher" && checkForModal()) context = "quickswitch";
-    else if (active?.contains(getChatComposer())) context = "chat";
+    if (document.querySelector(contextSearch.quickswitch)) context = "quickswitch";
+    else if (getMainChat()?.contains(active) || getChatComposer()) context = "chat";
     else if (checkForDms()) context = "dms"
     else if (checkForModal()) context = "modal"; // FIXME: kinda fixes the bug, but should still find a better way of doing this
-    else context = "unknown";
-
-    // this is all over the place right now but i just want it to update on time
-    updateModeIndicator();
-    toastHelper("testing");
+    else {
+        console.log(document.activeElement);
+        context = "unknown";
+    }
 
     if (mode === "Normal") {
         unfocusChatComposer();
@@ -425,6 +434,7 @@ function checkModeAndContext() {
         if (!chat) return;
         focusChatComposer(chat);
     }
+    updateModeIndicator();
 
 }
 
@@ -459,14 +469,6 @@ function getOrCreateModeIndicator(userArea: Element): Element {
     }
 }
 
-function updateModeIndicator() {
-    const userArea = document.querySelector(contextSearch.userArea);
-    if (!userArea) return;
-
-    const el = getOrCreateModeIndicator(userArea);
-    el.textContent = `${mode} | Context: ${context}`;
-}
-
 export default definePlugin({
     name: "Vimcord",
     description: "Provides keyboard-based navigation and control of Discord in spirit of the Vimium browser extension, which is in spirit of the Vim editor.",
@@ -481,8 +483,7 @@ export default definePlugin({
 
         observer?.disconnect();
         observer = new MutationObserver(() => {
-            // checkModeAndContext(); // breaks everything? don't use?
-            updateModeIndicator();
+            checkModeAndContext();
         });
         observer.observe(document.body, { childList: true, subtree: true });
     },
