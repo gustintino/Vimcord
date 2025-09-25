@@ -19,6 +19,9 @@ import definePlugin from "@utils/types";
 import { ChannelRouter, ChannelStore, ExpressionPickerStore, Toasts } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
 
+// this got imported somehow and I am curious too see what it's for
+// import { openChangeDecorationModal } from "plugins/decor/ui/modals/ChangeDecorationModal";
+
 type ContextType = "chat composer" | "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "forums" | "unknown" | "settings" | "nsfw";
 let context: ContextType = "chat";
 type Mode = "Insert" | "Normal";
@@ -82,7 +85,7 @@ function contextHandler(event: KeyboardEvent) {
         case "gifs":
         case "stickers":
         case "emojis":
-
+            gifMovement(event);
             break;
 
         default:
@@ -92,8 +95,35 @@ function contextHandler(event: KeyboardEvent) {
 }
 
 // yippieee found it
-function gifMovement() {
-    ExpressionPickerStore.openExpressionPicker("gif");
+function gifMovement(event: KeyboardEvent) {
+    // ExpressionPickerStore.openExpressionPicker("gif");
+
+    const hasCtrl = event.ctrlKey;
+
+    if (hasCtrl) {
+        switch (event.key) {
+            case "j":
+                // the deprecated 'keyCode' is required because someone at Discord is a fucking moron
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 40, bubbles: true }));
+                break;
+
+            case "k":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', keyCode: 38, bubbles: true }));
+                break;
+
+            case "h":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', keyCode: 37, bubbles: true }));
+                break;
+
+            case "l":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', keyCode: 39, bubbles: true }));
+                break;
+        }
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    // event.stopImmediatePropagation();
 }
 
 function handleMouse(event: MouseEvent) {
@@ -441,14 +471,20 @@ function checkModeAndContext() {
         context = "unknown";
     }
 
-    if (mode === "Normal") {
-        unfocusChatComposer();
+    if (context == "chat") {
+        if (mode === "Normal") {
+            unfocusChatComposer();
+        }
+        else {
+            const chat = getChatComposer();
+            if (!chat) return;
+            focusChatComposer(chat);
+        }
     }
     else {
-        const chat = getChatComposer();
-        if (!chat) return;
-        focusChatComposer(chat);
+        setMode("Normal");
     }
+
     updateModeIndicator();
 
 }
