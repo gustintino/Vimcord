@@ -7,7 +7,7 @@
 // TODO: write the readme
 //
 // TODO:
-// - gifs and emoji navigation (or at least no lockout)
+// - ctrl + w to delete word? needs some tinkering
 //
 // - harpoon-like quick-saved servers and/or channels?
 // - try making the quick-reply plugin functionalities myself?
@@ -22,14 +22,21 @@ import { findByPropsLazy } from "@webpack";
 // this got imported somehow and I am curious too see what it's for
 // import { openChangeDecorationModal } from "plugins/decor/ui/modals/ChangeDecorationModal";
 
-type ContextType = "chat composer" | "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "forums" | "unknown" | "settings" | "nsfw";
+type ContextType = "chat composer" | "chat" | "quickswitch" | "gifs" | "stickers" | "emojis" | "modal" | "dms" | "forums" | "unknown" | "settings" | "nsfw" | "pins" | "search";
 let context: ContextType = "chat";
 type Mode = "Insert" | "Normal";
-let mode: Mode = "Normal";
+let currMode: Mode = "Normal";
+let prevMode: Mode = "Normal";
 let pending: string = "";
 let observer: MutationObserver | null = null;
 
 const KeyBinds = findByPropsLazy("JUMP_TO_GUILD", "SERVER_NEXT");
+
+// NOTE: using this throws errors in the console, HOWEVER it does work fine.
+// I haven't been able to fix (or at least remove) the error.
+// Other methods don't work because both Discord and Vecord devs are morons and don't do documentation.
+// I am ignoring this error for now. this will NOT bite me in the ass later.
+const Expressions = findByPropsLazy("TOGGLE_GIF_PICKER");
 
 const contextSearch = {
     dms: '[class="peopleColumn__133bf"]',
@@ -41,16 +48,14 @@ const contextSearch = {
     vimcordIndicator: '.vimcord-indicator',
     quickswitch: '[aria-label="Quick Switcher"]',
     noPermChat: '[aria-label="You do not have permission to send messages in this channel."]',
-    forums: '[role="list"]',  // is this enough tho
+    forums: '[role="list"]',  // seems to work, but is this enough?
     settings: '[data-layer="USER_SETTINGS"]',
     nsfw: '[data-text-variant="text-lg/semibold"]',
     gifs: '[id="gif-picker-tab-panel"]',
     stickers: '[id="sticker-picker-tab-panel"]',
-    emojis: '[id="emoji-picker-tab-panel"]'
-
-
-    // add searching
-    // add pins
+    emojis: '[id="emoji-picker-tab-panel"]',
+    searchBar: '[aria-expanded="true"][aria-label="Search"][aria-haspopup="listbox"]',
+    pins: '[aria-label="Pinned Messages"][aria-expanded="true"]'
 };
 
 function contextHandler(event: KeyboardEvent) {
@@ -71,6 +76,7 @@ function contextHandler(event: KeyboardEvent) {
 
         case "modal":
             switch (event.key) {
+                // add ctrl + c here?
                 case "Escape":
                     checkModeAndContext();
                     break;
@@ -85,19 +91,64 @@ function contextHandler(event: KeyboardEvent) {
         case "gifs":
         case "stickers":
         case "emojis":
-            gifMovement(event);
+            expressionMovement(event);
             break;
 
         default:
             break;
     }
 
+    globalKeyBinds(event);
+}
+
+function globalKeyBinds(event: KeyboardEvent) {
+    const hasCtrl = event.ctrlKey;
+    const hasAlt = event.altKey;
+
+    if (hasCtrl) {
+        switch (event.key) {
+            // suspiciously long start up times after doing this?
+            case "q":
+                return;
+            case "r":
+                return;
+
+            case "g":
+                prevMode = currMode;
+                Expressions.TOGGLE_GIF_PICKER.action();
+
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case "e":
+                prevMode = currMode;
+                Expressions.TOGGLE_EMOJI_PICKER.action();
+
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case "s":
+                prevMode = currMode;
+                Expressions.TOGGLE_STICKER_PICKER.action();
+
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+        }
+    }
+
+
+    // switch (event.key) {
+    //     default:
+    //         event.preventDefault();
+    //         event.stopPropagation();
+    //         break;
+    // }
+
 }
 
 // yippieee found it
-function gifMovement(event: KeyboardEvent) {
-    // ExpressionPickerStore.openExpressionPicker("gif");
-
+function expressionMovement(event: KeyboardEvent) {
     const hasCtrl = event.ctrlKey;
 
     if (hasCtrl) {
@@ -105,25 +156,60 @@ function gifMovement(event: KeyboardEvent) {
             case "j":
                 // the deprecated 'keyCode' is required because someone at Discord is a fucking moron
                 event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 40, bubbles: true }));
+
+                event.preventDefault();
+                event.stopPropagation();
                 break;
 
             case "k":
                 event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', keyCode: 38, bubbles: true }));
+
+                event.preventDefault();
+                event.stopPropagation();
                 break;
 
             case "h":
                 event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', keyCode: 37, bubbles: true }));
+
+                event.preventDefault();
+                event.stopPropagation();
                 break;
 
             case "l":
-                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', keyCode: 39, bubbles: true }));
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }));
+
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+
+
+            case "y":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+
+            case "c":
+                ExpressionPickerStore.closeExpressionPicker();
+                toastHelper(prevMode);
+                setMode(prevMode);
+
+                event.preventDefault();
+                event.stopPropagation();
                 break;
         }
     }
 
-    event.preventDefault();
-    event.stopPropagation();
-    // event.stopImmediatePropagation();
+    switch (event.key) {
+        case "Escape":
+            ExpressionPickerStore.closeExpressionPicker();
+            setMode(prevMode);
+
+            event.preventDefault();
+            event.stopPropagation();
+            break;
+    }
 }
 
 function handleMouse(event: MouseEvent) {
@@ -134,7 +220,7 @@ function handleMouse(event: MouseEvent) {
     }
     else {
         checkModeAndContext();
-        if (mode === "Insert") {
+        if (currMode === "Insert") {
             setMode("Normal");
         }
     }
@@ -167,10 +253,10 @@ function quickswitchControls(event: KeyboardEvent) {
 }
 
 function handleKeyPress(event: KeyboardEvent) {
-    if (mode === "Normal") {
+    if (currMode === "Normal") {
         handleNormalKeys(event);
     }
-    else if (mode === "Insert") {
+    else if (currMode === "Insert") {
         handleInsertKeys(event);
     }
 }
@@ -185,14 +271,19 @@ function handleNormalKeys(event: KeyboardEvent) {
         switch (event.key) {
             case "k":
                 KeyBinds.CHANNEL_PREV.action(event);
+
+                event.stopPropagation();
+                event.preventDefault();
                 break;
+
             case "j":
                 KeyBinds.CHANNEL_NEXT.action(event);
-                break;
-        }
 
-        event.preventDefault();
-        event.stopPropagation();
+                event.stopPropagation();
+                event.preventDefault();
+                break;
+
+        }
 
         return;
     }
@@ -213,14 +304,18 @@ function handleNormalKeys(event: KeyboardEvent) {
         switch (event.key) {
             case "k":
                 KeyBinds.UNREAD_PREV.action(event);
+
+                event.stopPropagation();
+                event.preventDefault();
                 break;
+
             case "j":
                 KeyBinds.UNREAD_NEXT.action(event);
+
+                event.stopPropagation();
+                event.preventDefault();
                 break;
         }
-
-        event.preventDefault();
-        event.stopPropagation();
 
         return;
     }
@@ -230,19 +325,22 @@ function handleNormalKeys(event: KeyboardEvent) {
             case "g":
                 pending = "";
                 scrollToTop(chat);
+
+                event.stopPropagation();
+                event.preventDefault();
                 break;
 
             case "d":
                 goToFirstDm();
+
+                event.stopPropagation();
+                event.preventDefault();
                 break;
 
             default:
                 pending = "";
                 break;
         }
-
-        event.preventDefault();
-        event.stopPropagation();
 
         return;
     }
@@ -254,36 +352,63 @@ function handleNormalKeys(event: KeyboardEvent) {
 
         case "j":
             scrollStep(chat, +60);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
         case "k":
             scrollStep(chat, -60);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
 
         case "J":
             KeyBinds.SERVER_NEXT.action(event);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
         case "K":
             KeyBinds.SERVER_PREV.action(event);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
 
         case "u":
             scrollHalfPage(chat, -1);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
         case "d":
             scrollHalfPage(chat, 1);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
 
         case "G":
             scrollToBottom(chat);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
 
         case "i":
+            event.stopPropagation();
+            event.preventDefault();
+
             setMode("Insert");
             placeCaretAtEnd();
             break;
 
         case "t":
             KeyBinds.QUICKSWITCHER_SHOW.action(event);
+
+            event.stopPropagation();
+            event.preventDefault();
             break;
 
         // resort to default handling. simplest solution
@@ -292,9 +417,6 @@ function handleNormalKeys(event: KeyboardEvent) {
             return;
 
     }
-
-    event.preventDefault();
-    event.stopPropagation();
 }
 
 function handleInsertKeys(event: KeyboardEvent) {
@@ -310,6 +432,12 @@ function handleInsertKeys(event: KeyboardEvent) {
                 event.stopPropagation();
                 break;
 
+            // degenarate delete method but i need it
+            case "w":
+                // event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', keyCode: 8, bubbles: true, ctrlKey: true }));
+                // event.stopPropagation();
+                break;
+
             // simulates a key press for the quick-reply plugin
             case "k":
                 event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, ctrlKey: true }));
@@ -319,7 +447,6 @@ function handleInsertKeys(event: KeyboardEvent) {
                 event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, ctrlKey: true }));
                 event.stopPropagation();
                 break;
-
         }
 
         return;
@@ -354,13 +481,6 @@ function checkForModal(): boolean {
     const modal = document.querySelector(contextSearch.modal);
     if (modal) return true;
     else return false;
-}
-
-function isScrollable(element: Element): boolean {
-    const style = getComputedStyle(element);
-    const canScrollY = style.overflowY === "auto" || style.overflowY === "scroll";
-
-    return canScrollY && element.scrollHeight > element.clientHeight;
 }
 
 function getMainChat(): Element | null {
@@ -440,7 +560,7 @@ function scrollToBottom(scroller: Element | null) {
 }
 
 function setMode(next: Mode) {
-    mode = next;
+    currMode = next;
     pending = "";
     updateModeIndicator();
 }
@@ -450,13 +570,15 @@ function updateModeIndicator() {
     if (!userArea) return;
 
     const el = getOrCreateModeIndicator(userArea);
-    el.textContent = `${mode} | Context: ${context}`;
+    el.textContent = `${currMode} | Context: ${context}`;
 }
 
 function checkModeAndContext() {
     const active = document.activeElement;
 
     if (document.querySelector(contextSearch.settings)) context = "settings";
+    else if (document.querySelector(contextSearch.pins)) context = "pins";
+    else if (document.querySelector(contextSearch.searchBar)) context = "search";
     else if (document.querySelector(contextSearch.nsfw)) context = "nsfw";
     else if (document.querySelector(contextSearch.quickswitch)) context = "quickswitch";
     else if (document.querySelector(contextSearch.gifs)) context = "gifs";
@@ -467,12 +589,12 @@ function checkModeAndContext() {
     else if (checkForDms()) context = "dms"
     else if (document.querySelector(contextSearch.forums)) context = "forums";
     else {
-        console.log(document.activeElement);
+        // fallback
         context = "unknown";
     }
 
     if (context == "chat") {
-        if (mode === "Normal") {
+        if (currMode === "Normal") {
             unfocusChatComposer();
         }
         else {
@@ -482,11 +604,11 @@ function checkModeAndContext() {
         }
     }
     else {
-        setMode("Normal");
+        // this just works flawlessly lol? expected more push back
+        setMode(prevMode);
     }
 
     updateModeIndicator();
-
 }
 
 function toastHelper(msg: string) {
@@ -501,7 +623,7 @@ function getOrCreateModeIndicator(userArea: Element): Element {
     else {
         const el = document.createElement("div");
         el.className = "vimcord-indicator";
-        el.textContent = `${mode} | Context: ${context}`;
+        el.textContent = `${currMode} | Context: ${context}`;
 
         // STYLING
         // el.style.display = "inline-block";
