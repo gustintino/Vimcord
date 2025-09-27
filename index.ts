@@ -8,6 +8,7 @@
 //
 // TODO:
 // - ctrl + w to delete word? needs some tinkering
+// - prettify the mode and context indicator (@mizto)
 //
 // - harpoon-like quick-saved servers and/or channels?
 // - try making the quick-reply plugin functionalities myself?
