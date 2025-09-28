@@ -16,4 +16,26 @@ You skim over the messages on your screen and want to check out a reply. You cli
 You start to cry.
 
 ## The Solution
+Vim keybinds! <br> <br>
+You do what you want when you want it, all without moving your hands from the keyboard! <br>
 
+## Installation
+The installation does require a bit of know-how. Vencord has all of its plugins pre-packaged before it's built and injected into Discord, so any additional plugins need to be manually added, built and injected. <br>
+This isn't a step by step guide, I'm simply noting rough steps I took to accomplish this. <br> <br>
+
+1. ```git clone ``` the Vencord repo
+2. Install ```npm``` or something similar (I used ```pnpm```)
+3. Clone this repo into ```/src/userplugins/``` (you will have to create the ```/userplugins``` directory)
+4. Do ```pnpm install``` to install any dependencies need to build
+5. Do ```pnpm build``` to build Vencord with custom plugins added
+6. Do ```pnpm inject``` to inject into regular Discord
+<br>
+And that's it! Now when you run Discord it should be the Vencord version. You simply go to Settings -> Vencord -> Plugins and select your plugins, you will probably have to restart Discord as well. <br> <br>
+Do note that you will have to re-build and re-inject on each Discord updatAnd that's it! Now when you run Discord it should be the Vencord version. You simply go to Settings -> Vencord -> Plugins and select your plugins, you will probably have to restart Discord as well. <br> <br>
+Do note that you will have to re-build and re-inject on each Discord update.
+
+## Usage and keybinds
+
+## Notes
+
+## To do
