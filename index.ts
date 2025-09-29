@@ -13,7 +13,6 @@
 // - harpoon-like quick-saved servers and/or channels?
 // - try making the quick-reply plugin functionalities myself?
 // - visual hints (no clue how to do this, need to search)
-// - h/l move focus from main chat to channels/servers/users? need to have hints by then
 // - check what https://github.com/CyR1en/VimCord?tab=readme-ov-file has been up to
 
 import definePlugin from "@utils/types";
@@ -249,8 +248,14 @@ function quickswitchControls(event: KeyboardEvent) {
             case "y":
                 event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
                 break;
+
+            case "c":
+                event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                break;
         }
     }
+
+
 }
 
 function handleKeyPress(event: KeyboardEvent) {
