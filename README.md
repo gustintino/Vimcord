@@ -88,6 +88,7 @@ It is also heavily set-up for me and for what makes sense to me. If someone want
 - [ ] Make all binds rebindable
 - [ ] Add a help window to check keybinds on the fly, even I forget some of them like reply and edit
 <br>
+
 Less important, but would probably still be nice: <br>
-- [ ] Harpoon-like shortcuts to selected channels/servers. Like 3-4 max and just have them on handy keybinds for quick firing
+- [ ] Harpoon-like shortcuts to selected channels/servers. Like 3-4 max and just have them on handy keybinds for quick firing <br>
 - [ ] Make the quick-reply plugin functionalities myself. I can check the actual plugin for references, but shouldn't be too hard
