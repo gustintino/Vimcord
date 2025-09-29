@@ -75,11 +75,10 @@ These keybinds should work regardless of mode and context. I believe all of thes
 
 
 ## Additional notes
-This plugin is not perfect or fully polished. <br>
+This plugin is not perfect or fully polished. <br> <br>
 On one hand it's because I'm doing this to learn, as I've never done anything webdev-ish before. Also, fun. <br>
-<br>
 On the other hand, both Discord and Vencord devs definitely made a Choice by not having any documentation whatsoever. Exploring Discord through DevTools is also quite the experience because I have several questions.
-<br>
+<br> <br> <br>
 It is also heavily set-up for me and for what makes sense to me. If someone wants to use this and doesn't like those keybinds, you could easily change it through code, it is very obivous where the keybinds are and what they do.
 
 ## To do
