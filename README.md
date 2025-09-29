@@ -79,7 +79,8 @@ This plugin is not perfect or fully polished. <br> <br>
 On one hand it's because I'm doing this to learn, as I've never done anything webdev-ish before. Also, fun. <br>
 On the other hand, both Discord and Vencord devs definitely made a Choice by not having any documentation whatsoever. Exploring Discord through DevTools is also quite the experience because I have several questions.
 <br> <br> <br>
-It is also heavily set-up for me and for what makes sense to me. If someone wants to use this and doesn't like those keybinds, you could easily change it through code, it is very obivous where the keybinds are and what they do.
+It is also heavily set-up for me and for what makes sense to me. If someone wants to use this and doesn't like those keybinds, you could easily change it through code, it is very obivous where the keybinds are and what they do. <br> <br>
+It is also assumed Caps has been rebound to Ctrl. Like God intended.
 
 ## To do
 - [ ] Visual hints, similar to the Vimium extension. Mostly because I'm interested in how it's done, less because I think it would be useful. There are so many things to click at any time and I feel like it would cause too much visual clutter.
